@@ -16,7 +16,9 @@ bool readyStart_bufor = 0;
 bool readyMeta = 0;
 
 // Define variables to store incoming readings
-bool wyscig = 0;
+//bool wyscig = 0;
+bool wyscig_lewa = 0;
+bool wyscig_prawa = 0;
 
 #define PPSPin 15    // D8
 #define lewaPin 12   //D6
@@ -239,12 +241,16 @@ void loop() {
   }
   */
 
+
+  //sterowanie po serialu
   readSerial();  //musimy odczytać co mamy w serialu
   if (stringComplete) {
     if (inputString == "W\n") {
       Serial.println("warunek");
-      wyscig = 1;
-      myData.wyscig = 1;  //do wyslania
+      //wyscig = 1;
+      wyscig_lewa = 1;
+      wyscig_prawa = 1;
+      myData.wyscig = 1;             //do wyslania
       lewa_licznik_filter = filter;  //zerujemy filtry
       prawa_licznik_filter = filter;
       // Send message via ESP-NOW
@@ -293,11 +299,11 @@ ICACHE_RAM_ATTR void PPS() {  //przerwanie od PPS
 }
 
 ICACHE_RAM_ATTR void lewa() {
-  if (wyscig == 1) {
+  if (wyscig_lewa == 1) {
     lewa_licznik_filter--;
     if (lewa_licznik_filter == 0) {
       lewa_licznik_filter = filter;
-      wyscig = 0;
+      wyscig_lewa = 0;
       if (millis() % 1000 >= syncMillis % 1000) {
         lewa_czas = (tm.Hour * 3600 + tm.Minute * 60 + tm.Second) * 1000 + millis() % 1000 - syncMillis % 1000;
       } else {
@@ -309,10 +315,17 @@ ICACHE_RAM_ATTR void lewa() {
 }
 
 ICACHE_RAM_ATTR void prawa() {
-  if (millis() % 1000 >= syncMillis % 1000) {
-    prawa_czas = (tm.Hour * 3600 + tm.Minute * 60 + tm.Second) * 1000 - (millis() % 1000 - syncMillis % 1000);
-  } else {
-    prawa_czas = (tm.Hour * 3600 + tm.Minute * 60 + tm.Second) * 1000 - (syncMillis % 1000 - millis() % 1000);
+  if (wyscig_prawa == 1) {
+    prawa_licznik_filter--;
+    if (prawa_licznik_filter == 0) {
+      prawa_licznik_filter = filter;
+      wyscig_prawa = 0;
+      if (millis() % 1000 >= syncMillis % 1000) {
+        prawa_czas = (tm.Hour * 3600 + tm.Minute * 60 + tm.Second) * 1000 + millis() % 1000 - syncMillis % 1000;
+      } else {
+        prawa_czas = (tm.Hour * 3600 + tm.Minute * 60 + tm.Second) * 1000 + 1000 + millis() % 1000 - syncMillis % 1000;
+      }
+    }
   }
   prawa_licznik++;
 }
